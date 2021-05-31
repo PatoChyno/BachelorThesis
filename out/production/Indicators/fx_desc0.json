@@ -1,0 +1,228 @@
+{
+  "config": {
+    "generateEnumAs": "subclass",
+    "generateDataProperties": false,
+    "generateBoolAs": "subclass",
+    "uri": "http://uim.bp/forex"
+  },
+  "csvdir": "src/test/forex",
+  "data": [
+    {
+      "attributes": [
+        {
+          "column": 1,
+          "property": "AUDCAD",
+          "type": "ENUM"
+        },
+        {
+          "column": 2,
+          "property": "AUDCHF",
+          "type": "ENUM"
+        },
+        {
+          "column": 3,
+          "property": "AUDJPY",
+          "type": "ENUM"
+        },
+        {
+          "column": 4,
+          "property": "AUDNZD",
+          "type": "ENUM"
+        },
+        {
+          "column": 5,
+          "property": "AUDUSD",
+          "type": "ENUM"
+        },
+        {
+          "column": 6,
+          "property": "BCHEUR",
+          "type": "ENUM"
+        },
+        {
+          "column": 7,
+          "property": "CADCHF",
+          "type": "ENUM"
+        },
+        {
+          "column": 8,
+          "property": "CADJPY",
+          "type": "ENUM"
+        },
+        {
+          "column": 9,
+          "property": "CHFJPY",
+          "type": "ENUM"
+        },
+        {
+          "column": 10,
+          "property": "EURAUD",
+          "type": "ENUM"
+        },
+        {
+          "column": 11,
+          "property": "EURCAD",
+          "type": "ENUM"
+        },
+        {
+          "column": 12,
+          "property": "EURCHF",
+          "type": "ENUM"
+        },
+        {
+          "column": 13,
+          "property": "EURGBP",
+          "type": "ENUM"
+        },
+        {
+          "column": 14,
+          "property": "EURHUF",
+          "type": "ENUM"
+        },
+        {
+          "column": 15,
+          "property": "EURJPY",
+          "type": "ENUM"
+        },
+        {
+          "column": 16,
+          "property": "EURNZD",
+          "type": "ENUM"
+        },
+        {
+          "column": 17,
+          "property": "EURPLN",
+          "type": "ENUM"
+        },
+        {
+          "column": 18,
+          "property": "EURRUB",
+          "type": "ENUM"
+        },
+        {
+          "column": 19,
+          "property": "EURUSD",
+          "type": "ENUM"
+        },
+        {
+          "column": 20,
+          "property": "GBPAUD",
+          "type": "ENUM"
+        },
+        {
+          "column": 21,
+          "property": "GBPCAD",
+          "type": "ENUM"
+        },
+        {
+          "column": 22,
+          "property": "GBPCHF",
+          "type": "ENUM"
+        },
+        {
+          "column": 23,
+          "property": "GBPJPY",
+          "type": "ENUM"
+        },
+        {
+          "column": 24,
+          "property": "GBPNZD",
+          "type": "ENUM"
+        },
+        {
+          "column": 25,
+          "property": "GBPUSD",
+          "type": "ENUM"
+        },
+        {
+          "column": 26,
+          "property": "GOLD",
+          "type": "ENUM"
+        },
+        {
+          "column": 27,
+          "property": "NZDCAD",
+          "type": "ENUM"
+        },
+        {
+          "column": 28,
+          "property": "NZDCHF",
+          "type": "ENUM"
+        },
+        {
+          "column": 29,
+          "property": "NZDJPY",
+          "type": "ENUM"
+        },
+        {
+          "column": 30,
+          "property": "NZDUSD",
+          "type": "ENUM"
+        },
+        {
+          "column": 31,
+          "property": "PLATINUM",
+          "type": "ENUM"
+        },
+        {
+          "column": 32,
+          "property": "SILVER",
+          "type": "ENUM"
+        },
+        {
+          "column": 33,
+          "property": "USDCAD",
+          "type": "ENUM"
+        },
+        {
+          "column": 34,
+          "property": "USDCHF",
+          "type": "ENUM"
+        },
+        {
+          "column": 35,
+          "property": "USDCNH",
+          "type": "ENUM"
+        },
+        {
+          "column": 36,
+          "property": "USDCZK",
+          "type": "ENUM"
+        },
+        {
+          "column": 37,
+          "property": "USDJPY",
+          "type": "ENUM"
+        },
+        {
+          "column": 38,
+          "property": "USDMXN",
+          "type": "ENUM"
+        },
+        {
+          "column": 39,
+          "property": "USDPLN",
+          "type": "ENUM"
+        },
+        {
+          "column": 40,
+          "property": "USDRON",
+          "type": "ENUM"
+        },
+        {
+          "column": 41,
+          "property": "USDRUB",
+          "type": "ENUM"
+        },
+        {
+          "column": 42,
+          "property": "WTI",
+          "type": "ENUM"
+        }
+      ],
+      "concept": "EVENT",
+      "dataSource": "out.csv",
+      "dataType": "ENTITY",
+      "keyColumn": 0
+    }]
+}
