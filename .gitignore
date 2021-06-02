@@ -1,0 +1,7 @@
+.idea/
+lib/
+generated_output/
+out/
+resources/
+Indicators.iml
+/lib
