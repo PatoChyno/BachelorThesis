@@ -13,36 +13,42 @@ public class Indicator {
     private final List<Float> thresholds;
     private final ConfigFile.CurrencyFrequency currencyFrequency;
     private final String currencyFrequencyString;
+    private final String testedCurrency;
+    private final List<SortedMap<String, Integer>> listOfCategories;
+    private final List<String> headerLine;
 
     public Indicator() {
         configFile = new ConfigFile();
         thresholds = configFile.getThresholds();
         currencyFrequency = configFile.getCurrencyFrequency();
         currencyFrequencyString = configFile.getCurrencyFrequencyAsString();
+        testedCurrency = configFile.getTestedCurrency();
+
+        listOfCategories = new ArrayList<>();
+        headerLine = new ArrayList<>();
     }
 
     public void processCurrencies() {
-        List<SortedMap<String, Integer>> listOfCategories = new ArrayList<>();
-        List<String> headerLine = new ArrayList<>();
 
         String fullDirName = "./resources/" + currencyFrequencyString;
         String[] filePathsList = getFilePathsList(fullDirName);
         Set<String> lastCurrencyDates = new HashSet<>();
 
         for (String filePath : filePathsList) {
-            SortedMap<String, Integer> currencyCategories = processCurrency(filePath, fullDirName, headerLine, lastCurrencyDates);
+            Tools.addCurrencyToHeader(filePath, headerLine);
+            SortedMap<String, Integer> currencyCategories = processCurrency(filePath, fullDirName, lastCurrencyDates);
             lastCurrencyDates = currencyCategories.keySet();
             listOfCategories.add(currencyCategories);
         }
-        deleteIncompleteDateRecords(listOfCategories);
+        deleteIncompleteDateRecords();
 
-        mergeClassValuesIntoFile(listOfCategories, headerLine);
+        mergeCategoryValuesIntoFile();
 
         Tools.writeJenaConfig(headerLine);
-        Tools.writeDLLearnerConfig(listOfCategories, configFile.getDlLearnerRunLimitSeconds());
+        Tools.writeDLLearnerConfig(listOfCategories, configFile.getDlLearnerRunLimitSeconds(), testedCurrency, headerLine, thresholds.size());
     }
 
-    private SortedMap<String, Integer> processCurrency(String filePath, String fullDirName, List<String> headerLine, Set<String> lastCurrencyDates) {
+    private SortedMap<String, Integer> processCurrency(String filePath, String fullDirName, Set<String> lastCurrencyDates) {
         File inputFile = new File(fullDirName + "/" + filePath);
         headerLine.add(filePath.substring(0, filePath.indexOf('_')));
         SortedMap<String, Float> records = getDifferenceValues(inputFile, currencyFrequency == ConfigFile.CurrencyFrequency.DAILY);
@@ -53,7 +59,7 @@ public class Indicator {
         return Tools.currencyInputDataFileNames(fullDirName);
     }
 
-    private static void deleteIncompleteDateRecords(List<SortedMap<String, Integer>> listOfCategories) {
+    private void deleteIncompleteDateRecords() {
         if (listOfCategories.size() > 1) {
             for (int i = listOfCategories.size() - 1; i > 0; i--) {
                 Set<String> moreDates = listOfCategories.get(i - 1).keySet();
@@ -63,7 +69,7 @@ public class Indicator {
         }
     }
 
-    private static SortedMap<String, Integer> assignCategoriesToCurrencyRecords(SortedMap<String, Float> records, List<Float> thresholds, Set<String> lastCurrencyDates) {
+    private SortedMap<String, Integer> assignCategoriesToCurrencyRecords(SortedMap<String, Float> records, List<Float> thresholds, Set<String> lastCurrencyDates) {
 
 //        Queue<Float> last10 = new LinkedList<>();
 
@@ -103,7 +109,7 @@ public class Indicator {
         return categoryValues;
     }
 
-    private static int findCategoryValue(List<Float> thresholds, float currentRecord, float average, float extremesDifference) {
+    private int findCategoryValue(List<Float> thresholds, float currentRecord, float average, float extremesDifference) {
         float currentToAverageRecordRatio = (currentRecord - average) / extremesDifference;
         if (currentToAverageRecordRatio == 0) {
             return 0;
@@ -125,7 +131,7 @@ public class Indicator {
         return thresholdIndex;
     }
 
-    private static SortedMap<String, Float> getDifferenceValues(File file, boolean isDaily) {
+    private SortedMap<String, Float> getDifferenceValues(File file, boolean isDaily) {
         SortedMap<String, Float> records = new TreeMap<>();
         try {
             CSVParser parser = CSVFormat.TDF.parse(new InputStreamReader(new FileInputStream(file)));
@@ -156,11 +162,11 @@ public class Indicator {
         return records;
     }
 
-    public static float valueAt(CSVRecord record, int index) {
+    public float valueAt(CSVRecord record, int index) {
         return Float.parseFloat(record.get(index));
     }
 
-    private static void mergeClassValuesIntoFile(List<SortedMap<String, Integer>> classesList, List<String> headerLine) {
+    private void mergeCategoryValuesIntoFile() {
         final String DATETIME_KEY_TITLE = "[DATETIME_KEY]";
         BufferedWriter writer = null;
         CSVPrinter csvPrinter = null;
@@ -175,9 +181,9 @@ public class Indicator {
                 csvPrinter.print(caption);
             }
             csvPrinter.printRecord();
-            for (String dateTimeKey : classesList.get(0).keySet()) {
+            for (String dateTimeKey : listOfCategories.get(0).keySet()) {
                 csvPrinter.print(dateTimeKey);
-                for (SortedMap<String, Integer> classes : classesList) {
+                for (SortedMap<String, Integer> classes : listOfCategories) {
                     csvPrinter.print(classes.get(dateTimeKey));
                 }
                 csvPrinter.printRecord();

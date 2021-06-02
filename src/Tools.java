@@ -9,9 +9,10 @@ import java.util.*;
 
 public class Tools {
     private static final String CONF_PREFIX = "kb";
-    private static final int CURRENCY_INDEX = 18;
     public static final String OUTPUT_DIRECTORY = "./generated_output/";
     public static final String OUTPUT_FILE = "out.csv";
+    public static final String DLLEARNER_CONFIG_FILENAME = "fx0.conf";
+    public static final String JENA_JSON_FILENAME = "fx_desc0.json";
 
     public static String[] currencyInputDataFileNames(String directoryParent) {
         File directory = new File(directoryParent);
@@ -53,10 +54,9 @@ public class Tools {
     }
 
     public static void writeJenaConfig(List<String> headerLine) {
-        String filename = OUTPUT_DIRECTORY + "fx_desc0.json";
+        String filename = OUTPUT_DIRECTORY + JENA_JSON_FILENAME;
         JSONObject json = Tools.generateJenaJSON(headerLine);
-        String jsonString = json.toString();
-        writeConfigFile(jsonString, filename);
+        writeConfigFile(json.toString(), filename);
     }
 
     private static void writeConfigFile(String content, String filename) {
@@ -70,9 +70,9 @@ public class Tools {
         }
     }
 
-    public static void writeDLLearnerConfig(List<SortedMap<String, Integer>> classesList, int dlLearnerRunLimitSeconds) {
-        String filename = OUTPUT_DIRECTORY + "fx0.conf";
-        Properties properties = generateDLLearnerConfig(classesList, dlLearnerRunLimitSeconds);
+    public static void writeDLLearnerConfig(List<SortedMap<String, Integer>> listOfCategories, int dlLearnerRunLimitSeconds, String testedCurrency, List<String> headerLine, int thresholdsSize) {
+        String filename = OUTPUT_DIRECTORY + DLLEARNER_CONFIG_FILENAME;
+        Properties properties = generateDLLearnerConfig(listOfCategories, dlLearnerRunLimitSeconds, testedCurrency, headerLine, thresholdsSize);
         String content = stringifyProperties(properties);
         writeConfigFile(content, filename);
     }
@@ -135,7 +135,7 @@ public class Tools {
         return stringBuilder.toString();
     }
 
-    private static Properties generateDLLearnerConfig(List<SortedMap<String, Integer>> classesList, int dlLearnerRunLimitSeconds) {
+    private static Properties generateDLLearnerConfig(List<SortedMap<String, Integer>> listOfCategories, int dlLearnerRunLimitSeconds, String testedCurrency, List<String> headerLine, int thresholdsSize) {
         Properties properties = new Properties();
 
         Map<String, String> prefixes = new HashMap<>();
@@ -152,39 +152,38 @@ public class Tools {
 
         properties.put("lp.type", "posNegStandard");
 
-        Set<String> positiveExamples = positiveExamples(classesList);
+        int testedCurrencyIndex = testedCurrencyIndex(headerLine, testedCurrency);
+
+        Set<String> positiveExamples = positiveExamples(listOfCategories, testedCurrencyIndex);
         properties.put("lp.positiveExamples", positiveExamples);
 
-        Set<String> negativeExamples = negativeExamples(classesList);
+        Set<String> negativeExamples = negativeExamples(listOfCategories, testedCurrencyIndex);
         properties.put("lp.negativeExamples", negativeExamples);
 
         properties.put("alg.type", "celoe");
         properties.put("alg.maxExecutionTimeInSeconds", dlLearnerRunLimitSeconds);
 
         Set<String> ignoredConcepts = new HashSet<>();
-        ignoredConcepts.add("S_EVENT_EURUSD_-3");
-        ignoredConcepts.add("S_EVENT_EURUSD_-2");
-        ignoredConcepts.add("S_EVENT_EURUSD_-1");
-        ignoredConcepts.add("S_EVENT_EURUSD_0");
-        ignoredConcepts.add("S_EVENT_EURUSD_1");
-        ignoredConcepts.add("S_EVENT_EURUSD_2");
-        ignoredConcepts.add("S_EVENT_EURUSD_3");
+        for (int i = 0; i <= thresholdsSize + 1; i++) {
+            ignoredConcepts.add("S_EVENT_" + testedCurrency + "_" + (i - ((thresholdsSize + 1) / 2)));
+        }
         properties.put("alg.ignoredConcepts", ignoredConcepts);
 
         return properties;
     }
 
-    private static Set<String> positiveExamples(List<SortedMap<String, Integer>> classesList) {
-        return findExamples(classesList, true);
+    private static Set<String> positiveExamples(List<SortedMap<String, Integer>> classesList, int testedCurrencyIndex) {
+        return findExamples(classesList, true, testedCurrencyIndex);
     }
 
-    private static Set<String> negativeExamples(List<SortedMap<String, Integer>> classesList) {
-        return findExamples(classesList, false);
+    private static Set<String> negativeExamples(List<SortedMap<String, Integer>> classesList, int testedCurrencyIndex) {
+        return findExamples(classesList, false, testedCurrencyIndex);
     }
 
-    private static Set<String> findExamples(List<SortedMap<String, Integer>> classesList, boolean isPositive) {
+    private static Set<String> findExamples(List<SortedMap<String, Integer>> currencyCategories, boolean isPositive, int testedCurrencyIndex) {
         Set<String> examples = new HashSet<>();
-        SortedMap<String, Integer> map = classesList.get(Tools.CURRENCY_INDEX);
+
+        SortedMap<String, Integer> map = currencyCategories.get(testedCurrencyIndex);
         for (Map.Entry<String, Integer> entry : map.entrySet()) {
             if (isPositive) {
                 if (entry.getValue() > 0) {
@@ -197,5 +196,22 @@ public class Tools {
             }
         }
         return examples;
+    }
+
+    public static void addCurrencyToHeader(String filePath, List<String> headerLine) {
+        headerLine.add(filePath.substring(0, filePath.indexOf('_')));
+    }
+
+    private static int testedCurrencyIndex(List<String> headerLine, String testedCurrency) {
+        int index = 0;
+        boolean found = false;
+        while (index < headerLine.size() && !found) {
+            if (headerLine.get(index).equals(testedCurrency)) {
+                found = true;
+            } else {
+                index++;
+            }
+        }
+        return index;
     }
 }
