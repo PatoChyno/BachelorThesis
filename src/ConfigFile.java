@@ -8,9 +8,15 @@ public class ConfigFile {
     private List<Float> thresholds;
     private int dlLearnerRunLimitSeconds;
     private final Properties properties;
+    private CurrencyFrequency currencyFrequency;
+
+    public enum CurrencyFrequency {
+        MINUTES, HOURLY, DAILY
+    }
 
     public ConfigFile() {
         thresholds = null;
+        currencyFrequency = null;
         dlLearnerRunLimitSeconds = -1;
 
         properties = new Properties();
@@ -44,5 +50,40 @@ public class ConfigFile {
             }
         }
         thresholds = Arrays.stream(thresholdsStrings).map(Float::parseFloat).sorted().collect(Collectors.toList());
+    }
+
+    public String getCurrencyFrequencyAsString() {
+        if (currencyFrequency == null) {
+            setCurrencyFrequency();
+        }
+        String returnValue = "";
+        switch (currencyFrequency) {
+            case MINUTES -> returnValue = "minutes";
+            case HOURLY -> returnValue = "hourly";
+            case DAILY -> returnValue = "daily";
+        }
+        return returnValue;
+    }
+
+    public CurrencyFrequency getCurrencyFrequency() {
+        if (currencyFrequency == null) {
+            setCurrencyFrequency();
+        }
+        return currencyFrequency;
+    }
+
+    private void setCurrencyFrequency() {
+        switch (properties.getProperty("currency_frequency").toLowerCase()) {
+            case "minutes" -> currencyFrequency = CurrencyFrequency.MINUTES;
+            case "hourly" -> currencyFrequency = CurrencyFrequency.HOURLY;
+            case "daily" -> currencyFrequency = CurrencyFrequency.DAILY;
+            default -> {
+                try {
+                    throw new Exception("The currency frequency in the config file isn't a recognized value (please choose one of: 'minutes', 'hourly', 'daily')");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 }

@@ -10,18 +10,12 @@ import java.util.*;
 public class Tools {
     private static final String CONF_PREFIX = "kb";
     private static final int CURRENCY_INDEX = 18;
+    public static final String OUTPUT_DIRECTORY = "./generated_output/";
+    public static final String OUTPUT_FILE = "out.csv";
 
-    private static String[] getFileNamesList() {
-        File directory = new File("./resources");
+    public static String[] currencyInputDataFileNames(String directoryParent) {
+        File directory = new File(directoryParent);
         return directory.list();
-    }
-
-    public static String[] getInputFilePathsList() {
-        return getFileNamesList();
-    }
-
-    public static String[] getOutputFileNamesList() {
-        return getFileNamesList();
     }
 
     private static JSONObject generateJenaJSON(List<String> currencies) {
@@ -38,7 +32,7 @@ public class Tools {
         JSONArray data = new JSONArray();
         JSONObject d0 = new JSONObject();
         d0.put("dataType", "ENTITY");
-        d0.put("dataSource", "out.csv");
+        d0.put("dataSource", OUTPUT_FILE);
         d0.put("keyColumn", 0);
         d0.put("concept", "EVENT");
 
@@ -59,7 +53,7 @@ public class Tools {
     }
 
     public static void writeJenaConfig(List<String> headerLine) {
-        String filename = "./out/production/Indicators/fx_desc0.json";
+        String filename = OUTPUT_DIRECTORY + "fx_desc0.json";
         JSONObject json = Tools.generateJenaJSON(headerLine);
         String jsonString = json.toString();
         writeConfigFile(jsonString, filename);
@@ -77,7 +71,7 @@ public class Tools {
     }
 
     public static void writeDLLearnerConfig(List<SortedMap<String, Integer>> classesList, int dlLearnerRunLimitSeconds) {
-        String filename = "./out/production/Indicators/fx0.conf";
+        String filename = OUTPUT_DIRECTORY + "fx0.conf";
         Properties properties = generateDLLearnerConfig(classesList, dlLearnerRunLimitSeconds);
         String content = stringifyProperties(properties);
         writeConfigFile(content, filename);

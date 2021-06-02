@@ -1,11 +1,12 @@
 # Default ignored files
-/shelf/
-/workspace.xml
-# Datasource local storage ignored files
-/../../../../../../../:\Users\Chynoransky\IdeaProjects\BP\Indicators\.idea/dataSources/
-/dataSources.local.xml
-# Editor-based HTTP Client requests
-/httpRequests/
-
-/libraries
-/../lib
+workspace.xml
+misc.xml
+modules.xml
+uiDesigner.xml
+vcs.xml
+libraries/
+../lib/
+../generated_output/
+../out/
+../resources/
+../Indicators.iml

@@ -9,31 +9,52 @@ import java.nio.file.Paths;
 import java.util.*;
 
 public class Indicator {
+
     public static void main(String... args) {
-        String[] filePathsList = Tools.getInputFilePathsList();
-        String outputPathName = "./out/production/Indicators/out.csv";
-        List<SortedMap<String, Integer>> classesList = new ArrayList<>();
-        List<String> headerLine = new ArrayList<>();
         ConfigFile configFile = new ConfigFile();
         List<Float> thresholds = configFile.getThresholds();
+        ConfigFile.CurrencyFrequency currencyFrequency = configFile.getCurrencyFrequency();
+        String currencyFrequencyString = configFile.getCurrencyFrequencyAsString();
+
+        String fullDirName = "./resources/" + currencyFrequencyString;
+        String[] filePathsList = Tools.currencyInputDataFileNames(fullDirName);
+
+        List<SortedMap<String, Integer>> listOfCategories = new ArrayList<>();
+        List<String> headerLine = new ArrayList<>();
+        Set<String> lastCurrencyDates = new HashSet<>();
 
         for (String filePath : filePathsList) {
-            File inputFile = new File("./resources/" + filePath);
+            File inputFile = new File(fullDirName + "/" + filePath);
             headerLine.add(filePath.substring(0, filePath.indexOf('_')));
-            SortedMap<String, Float> records = getDifferenceValues(inputFile);
-            SortedMap<String, Integer> classValues = assignCategoriesToRecords(records, thresholds);
-            classesList.add(classValues);
+            SortedMap<String, Float> records = getDifferenceValues(inputFile, currencyFrequency == ConfigFile.CurrencyFrequency.DAILY);
+            SortedMap<String, Integer> currencyCategories = assignCategoriesToCurrencyRecords(records, thresholds, lastCurrencyDates);
+            lastCurrencyDates = records.keySet();
+            listOfCategories.add(currencyCategories);
         }
-        mergeClassValuesIntoFile(classesList, new File(outputPathName), headerLine);
+        deleteIncompleteDateRecords(listOfCategories);
+
+        String outputPathName = Tools.OUTPUT_DIRECTORY + Tools.OUTPUT_FILE;
+        mergeClassValuesIntoFile(listOfCategories, new File(outputPathName), headerLine);
 
         Tools.writeJenaConfig(headerLine);
-        Tools.writeDLLearnerConfig(classesList, configFile.getDlLearnerRunLimitSeconds());
+        Tools.writeDLLearnerConfig(listOfCategories, configFile.getDlLearnerRunLimitSeconds());
+    }
+
+    private static void deleteIncompleteDateRecords(List<SortedMap<String, Integer>> listOfCategories) {
+        if (listOfCategories.size() > 1) {
+            for (int i = listOfCategories.size() - 1; i > 0; i--) {
+                Set<String> moreDates = listOfCategories.get(i - 1).keySet();
+                Set<String> lessDates = listOfCategories.get(i).keySet();
+                moreDates.removeIf(date -> !lessDates.contains(date));
+            }
+        }
     }
 
     private static void mergeClassValuesIntoFile(List<SortedMap<String, Integer>> classesList, File file, List<String> headerLine) {
         BufferedWriter writer = null;
         CSVPrinter csvPrinter = null;
         try {
+            Files.createDirectory(Paths.get(file.getPath()).getParent());
             writer = Files.newBufferedWriter(Paths.get(file.getPath()));
             csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT);
             csvPrinter.print("[DATETIME_KEY]");
@@ -65,7 +86,7 @@ public class Indicator {
         }
     }
 
-    private static SortedMap<String, Integer> assignCategoriesToRecords(SortedMap<String, Float> records, List<Float> thresholds) {
+    private static SortedMap<String, Integer> assignCategoriesToCurrencyRecords(SortedMap<String, Float> records, List<Float> thresholds, Set<String> lastCurrencyDates) {
 
 //        Queue<Float> last10 = new LinkedList<>();
 
@@ -93,7 +114,13 @@ public class Indicator {
             //int categoryValue = findClosestCategoryValue(thresholds, currentRecord.getValue(), average, extremesDifference);
             int categoryValue = findCategoryValue(thresholds, currentRecord.getValue(), average, extremesDifference);
             String categoryDate = currentRecord.getKey();
-            categoryValues.put(categoryDate, categoryValue);
+            if (lastCurrencyDates.isEmpty()) {
+                categoryValues.put(categoryDate, categoryValue);
+            } else {
+                if (lastCurrencyDates.contains(categoryDate)) {
+                    categoryValues.put(categoryDate, categoryValue);
+                }
+            }
         }
 
         return categoryValues;
@@ -127,7 +154,7 @@ public class Indicator {
     }
      */
 
-    private static SortedMap<String, Float> getDifferenceValues(File file) {
+    private static SortedMap<String, Float> getDifferenceValues(File file, boolean isDaily) {
         SortedMap<String, Float> records = new TreeMap<>();
         try {
             CSVParser parser = CSVFormat.TDF.parse(new InputStreamReader(new FileInputStream(file)));
@@ -138,10 +165,18 @@ public class Indicator {
                     isFirstLine = false;
                     continue;
                 }
-                float open = valueAt(record, 2);
-                float close = valueAt(record, 5);
+                float open, close;
+                String dateTimeKey;
+                if (isDaily) {
+                    open = valueAt(record, 1);
+                    close = valueAt(record, 4);
+                    dateTimeKey = record.get(0);
+                } else {
+                    open = valueAt(record, 2);
+                    close = valueAt(record, 5);
+                    dateTimeKey = record.get(0) + "T" + record.get(1);
+                }
                 float difference = close - open;
-                String dateTimeKey = record.get(0) + "T" + record.get(1);
                 records.put(dateTimeKey, difference);
             }
         } catch (IOException e) {
