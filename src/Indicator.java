@@ -36,7 +36,7 @@ public class Indicator {
         }
         deleteIncompleteDateRecords(listOfCategories);
 
-        mergeClassValuesIntoFile(listOfCategories, headerLine, Tools.OUTPUT_DIRECTORY, Tools.OUTPUT_FILE);
+        mergeClassValuesIntoFile(listOfCategories, headerLine);
 
         Tools.writeJenaConfig(headerLine);
         Tools.writeDLLearnerConfig(listOfCategories, configFile.getDlLearnerRunLimitSeconds());
@@ -160,15 +160,15 @@ public class Indicator {
         return Float.parseFloat(record.get(index));
     }
 
-    private static void mergeClassValuesIntoFile(List<SortedMap<String, Integer>> classesList, List<String> headerLine,  String directory, String fileName) {
+    private static void mergeClassValuesIntoFile(List<SortedMap<String, Integer>> classesList, List<String> headerLine) {
         final String DATETIME_KEY_TITLE = "[DATETIME_KEY]";
         BufferedWriter writer = null;
         CSVPrinter csvPrinter = null;
         try {
-            if (!Files.isDirectory(Paths.get(directory))) {
-                Files.createDirectory(Paths.get(directory));
+            if (!Files.isDirectory(Paths.get(Tools.OUTPUT_DIRECTORY))) {
+                Files.createDirectory(Paths.get(Tools.OUTPUT_DIRECTORY));
             }
-            writer = Files.newBufferedWriter(Paths.get(fileName));
+            writer = Files.newBufferedWriter(Paths.get(Tools.OUTPUT_DIRECTORY + Tools.OUTPUT_FILE));
             csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT);
             csvPrinter.print(DATETIME_KEY_TITLE);
             for (String caption : headerLine) {
