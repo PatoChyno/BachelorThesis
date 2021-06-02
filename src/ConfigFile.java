@@ -9,6 +9,7 @@ public class ConfigFile {
     private int dlLearnerRunLimitSeconds;
     private final Properties properties;
     private CurrencyFrequency currencyFrequency;
+    private String testedCurrency;
 
     public enum CurrencyFrequency {
         MINUTES, HOURLY, DAILY
@@ -18,11 +19,11 @@ public class ConfigFile {
         thresholds = null;
         currencyFrequency = null;
         dlLearnerRunLimitSeconds = -1;
+        testedCurrency = "";
 
         properties = new Properties();
         try {
             properties.load(new FileInputStream("./src/config.properties"));
-
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -32,16 +33,16 @@ public class ConfigFile {
         if (thresholds == null) {
             initThresholds();
         }
-        return this.thresholds;
+        return thresholds;
     }
 
     public int getDlLearnerRunLimitSeconds() {
-        dlLearnerRunLimitSeconds = Integer.parseInt(properties.getProperty("dl_run_seconds"));
+        dlLearnerRunLimitSeconds = Integer.parseInt(retrieveProperty("dl_run_seconds"));
         return dlLearnerRunLimitSeconds;
     }
 
     private void initThresholds() {
-        String[] thresholdsStrings = properties.getProperty("thresholds").split(",");
+        String[] thresholdsStrings = retrieveProperty("thresholds").split(",");
         if (thresholdsStrings.length % 2 == 0) {
             try {
                 throw new Exception("The number of thresholds has to be odd!");
@@ -73,7 +74,7 @@ public class ConfigFile {
     }
 
     private void setCurrencyFrequency() {
-        switch (properties.getProperty("currency_frequency").toLowerCase()) {
+        switch (retrieveProperty("currency_frequency").toLowerCase()) {
             case "minutes" -> currencyFrequency = CurrencyFrequency.MINUTES;
             case "hourly" -> currencyFrequency = CurrencyFrequency.HOURLY;
             case "daily" -> currencyFrequency = CurrencyFrequency.DAILY;
@@ -85,5 +86,22 @@ public class ConfigFile {
                 }
             }
         }
+    }
+
+    public String getTestedCurrency() {
+        testedCurrency = retrieveProperty("tested_currency");
+        return testedCurrency;
+    }
+
+    private String retrieveProperty(String propertyName) {
+        String property = properties.getProperty(propertyName);
+        if (property == null) {
+            try {
+                throw new Exception("Property " + propertyName + " is not defined in the properties config file.");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return property;
     }
 }

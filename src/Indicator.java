@@ -9,35 +9,48 @@ import java.nio.file.Paths;
 import java.util.*;
 
 public class Indicator {
+    private final ConfigFile configFile;
+    private final List<Float> thresholds;
+    private final ConfigFile.CurrencyFrequency currencyFrequency;
+    private final String currencyFrequencyString;
 
-    public static void main(String... args) {
-        ConfigFile configFile = new ConfigFile();
-        List<Float> thresholds = configFile.getThresholds();
-        ConfigFile.CurrencyFrequency currencyFrequency = configFile.getCurrencyFrequency();
-        String currencyFrequencyString = configFile.getCurrencyFrequencyAsString();
+    public Indicator() {
+        configFile = new ConfigFile();
+        thresholds = configFile.getThresholds();
+        currencyFrequency = configFile.getCurrencyFrequency();
+        currencyFrequencyString = configFile.getCurrencyFrequencyAsString();
+    }
 
-        String fullDirName = "./resources/" + currencyFrequencyString;
-        String[] filePathsList = Tools.currencyInputDataFileNames(fullDirName);
-
+    public void processCurrencies() {
         List<SortedMap<String, Integer>> listOfCategories = new ArrayList<>();
         List<String> headerLine = new ArrayList<>();
+
+        String fullDirName = "./resources/" + currencyFrequencyString;
+        String[] filePathsList = getFilePathsList(fullDirName);
         Set<String> lastCurrencyDates = new HashSet<>();
 
         for (String filePath : filePathsList) {
-            File inputFile = new File(fullDirName + "/" + filePath);
-            headerLine.add(filePath.substring(0, filePath.indexOf('_')));
-            SortedMap<String, Float> records = getDifferenceValues(inputFile, currencyFrequency == ConfigFile.CurrencyFrequency.DAILY);
-            SortedMap<String, Integer> currencyCategories = assignCategoriesToCurrencyRecords(records, thresholds, lastCurrencyDates);
-            lastCurrencyDates = records.keySet();
+            SortedMap<String, Integer> currencyCategories = processCurrency(filePath, fullDirName, headerLine, lastCurrencyDates);
+            lastCurrencyDates = currencyCategories.keySet();
             listOfCategories.add(currencyCategories);
         }
         deleteIncompleteDateRecords(listOfCategories);
 
-        String outputPathName = Tools.OUTPUT_DIRECTORY + Tools.OUTPUT_FILE;
         mergeClassValuesIntoFile(listOfCategories, headerLine, Tools.OUTPUT_DIRECTORY, Tools.OUTPUT_FILE);
 
         Tools.writeJenaConfig(headerLine);
         Tools.writeDLLearnerConfig(listOfCategories, configFile.getDlLearnerRunLimitSeconds());
+    }
+
+    private SortedMap<String, Integer> processCurrency(String filePath, String fullDirName, List<String> headerLine, Set<String> lastCurrencyDates) {
+        File inputFile = new File(fullDirName + "/" + filePath);
+        headerLine.add(filePath.substring(0, filePath.indexOf('_')));
+        SortedMap<String, Float> records = getDifferenceValues(inputFile, currencyFrequency == ConfigFile.CurrencyFrequency.DAILY);
+        return assignCategoriesToCurrencyRecords(records, thresholds, lastCurrencyDates);
+    }
+
+    private String[] getFilePathsList(String fullDirName) {
+        return Tools.currencyInputDataFileNames(fullDirName);
     }
 
     private static void deleteIncompleteDateRecords(List<SortedMap<String, Integer>> listOfCategories) {
@@ -46,44 +59,6 @@ public class Indicator {
                 Set<String> moreDates = listOfCategories.get(i - 1).keySet();
                 Set<String> lessDates = listOfCategories.get(i).keySet();
                 moreDates.removeIf(date -> !lessDates.contains(date));
-            }
-        }
-    }
-
-    private static void mergeClassValuesIntoFile(List<SortedMap<String, Integer>> classesList, List<String> headerLine,  String directory, String fileName) {
-        BufferedWriter writer = null;
-        CSVPrinter csvPrinter = null;
-        try {
-            if (!Files.isDirectory(Paths.get(directory))) {
-                Files.createDirectory(Paths.get(directory));
-            }
-            writer = Files.newBufferedWriter(Paths.get(fileName));
-            csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT);
-            csvPrinter.print("[DATETIME_KEY]");
-            for (String caption : headerLine) {
-                csvPrinter.print(caption);
-            }
-            csvPrinter.printRecord();
-            for (String dateTimeKey : classesList.get(0).keySet()) {
-                csvPrinter.print(dateTimeKey);
-                for (SortedMap<String, Integer> classes : classesList) {
-                    csvPrinter.print(classes.get(dateTimeKey));
-                }
-                csvPrinter.printRecord();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (csvPrinter != null) {
-                    csvPrinter.flush();
-                }
-                if (writer != null) {
-                    writer.flush();
-                    writer.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
             }
         }
     }
@@ -150,12 +125,6 @@ public class Indicator {
         return thresholdIndex;
     }
 
-    /*
-    private static float calcNewAverage(float currentSum, float newElement, float oldElement, int elementCount) {
-        return (currentSum + newElement - oldElement) / elementCount;
-    }
-     */
-
     private static SortedMap<String, Float> getDifferenceValues(File file, boolean isDaily) {
         SortedMap<String, Float> records = new TreeMap<>();
         try {
@@ -190,4 +159,44 @@ public class Indicator {
     public static float valueAt(CSVRecord record, int index) {
         return Float.parseFloat(record.get(index));
     }
+
+    private static void mergeClassValuesIntoFile(List<SortedMap<String, Integer>> classesList, List<String> headerLine,  String directory, String fileName) {
+        final String DATETIME_KEY_TITLE = "[DATETIME_KEY]";
+        BufferedWriter writer = null;
+        CSVPrinter csvPrinter = null;
+        try {
+            if (!Files.isDirectory(Paths.get(directory))) {
+                Files.createDirectory(Paths.get(directory));
+            }
+            writer = Files.newBufferedWriter(Paths.get(fileName));
+            csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT);
+            csvPrinter.print(DATETIME_KEY_TITLE);
+            for (String caption : headerLine) {
+                csvPrinter.print(caption);
+            }
+            csvPrinter.printRecord();
+            for (String dateTimeKey : classesList.get(0).keySet()) {
+                csvPrinter.print(dateTimeKey);
+                for (SortedMap<String, Integer> classes : classesList) {
+                    csvPrinter.print(classes.get(dateTimeKey));
+                }
+                csvPrinter.printRecord();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (csvPrinter != null) {
+                    csvPrinter.flush();
+                }
+                if (writer != null) {
+                    writer.flush();
+                    writer.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
 }
