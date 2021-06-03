@@ -188,11 +188,14 @@ public class Tools {
         Set<String> examples = new HashSet<>();
 
         SortedMap<String, Integer> map = currencyCategories.get(testedCurrencyIndex);
+        int examplesCount = 0;
         for (Map.Entry<String, Integer> entry : map.entrySet()) {
-            if (isPositive && Math.abs(entry.getValue()) < 0 || !isPositive && Math.abs(entry.getValue()) >= 0) {
+            if (isPositive && entry.getValue() < 0 || !isPositive && entry.getValue() >= 0) {
                 examples.add("EVENT_" + entry.getKey());
+                examplesCount++;
             }
         }
+        System.out.println("Number of " + (isPositive ? "positive" : "negative") + " examples: " + examplesCount);
         return examples;
     }
 

@@ -53,7 +53,7 @@ public class Indicator {
 
     private SortedMap<String, Integer> processCurrency(String filePath, String fullDirName, Set<String> lastCurrencyDates) {
         File inputFile = new File(fullDirName + "/" + filePath);
-        SortedMap<String, Float> records = getDifferenceValues(inputFile, currencyFrequency == ConfigFile.CurrencyFrequency.DAILY);
+        SortedMap<String, Float> records = readDifferenceValues(inputFile, currencyFrequency == ConfigFile.CurrencyFrequency.DAILY);
         return assignCategoriesToCurrencyRecords(records, thresholds, lastCurrencyDates);
     }
 
@@ -131,7 +131,7 @@ public class Indicator {
         return thresholdIndex;
     }
 
-    private SortedMap<String, Float> getDifferenceValues(File file, boolean isDaily) {
+    private SortedMap<String, Float> readDifferenceValues(File file, boolean isDaily) {
         SortedMap<String, Float> records = new TreeMap<>();
         try {
             CSVParser parser = CSVFormat.TDF.parse(new InputStreamReader(new FileInputStream(file)));
