@@ -57,6 +57,7 @@ public class Tools {
         String filename = OUTPUT_DIRECTORY + JENA_JSON_FILENAME;
         JSONObject json = Tools.generateJenaJSON(headerLine);
         writeConfigFile(json.toString(), filename);
+        System.out.println("Jena config generated in file " + filename + ".");
     }
 
     private static void writeConfigFile(String content, String filename) {
@@ -75,6 +76,7 @@ public class Tools {
         Properties properties = generateDLLearnerConfig(listOfCategories, dlLearnerRunLimitSeconds, testedCurrency, headerLine, thresholdsSize);
         String content = stringifyProperties(properties);
         writeConfigFile(content, filename);
+        System.out.println("DL-Learner config generated in file " + filename + ".");
     }
 
     private static String stringifyProperties(Properties properties) {
@@ -164,8 +166,10 @@ public class Tools {
         properties.put("alg.maxExecutionTimeInSeconds", dlLearnerRunLimitSeconds);
 
         Set<String> ignoredConcepts = new HashSet<>();
-        for (int i = 0; i <= thresholdsSize + 1; i++) {
-            ignoredConcepts.add("S_EVENT_" + testedCurrency + "_" + (i - ((thresholdsSize + 1) / 2)));
+        for (int i = 0; i <= thresholdsSize; i++) {
+            int eventIndex = (i - ((thresholdsSize + 1) / 2));
+            eventIndex = (eventIndex < 0 ? ++eventIndex : eventIndex);
+            ignoredConcepts.add("S_EVENT_" + testedCurrency + "_" + eventIndex);
         }
         properties.put("alg.ignoredConcepts", ignoredConcepts);
 
@@ -185,14 +189,8 @@ public class Tools {
 
         SortedMap<String, Integer> map = currencyCategories.get(testedCurrencyIndex);
         for (Map.Entry<String, Integer> entry : map.entrySet()) {
-            if (isPositive) {
-                if (entry.getValue() > 0) {
-                    examples.add("EVENT_" + entry.getKey());
-                }
-            } else {
-                if (entry.getValue() <= 0) {
-                    examples.add("EVENT_" + entry.getKey());
-                }
+            if (isPositive && Math.abs(entry.getValue()) < 0 || !isPositive && Math.abs(entry.getValue()) >= 0) {
+                examples.add("EVENT_" + entry.getKey());
             }
         }
         return examples;
@@ -210,6 +208,13 @@ public class Tools {
                 found = true;
             } else {
                 index++;
+            }
+        }
+        if (!found) {
+            try {
+                throw new Exception("Tested currency " + testedCurrency + " is not in the set of defined currencies.");
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
         return index;

@@ -12,25 +12,28 @@ public class Indicator {
     private final ConfigFile configFile;
     private final List<Float> thresholds;
     private final ConfigFile.CurrencyFrequency currencyFrequency;
-    private final String currencyFrequencyString;
-    private final String testedCurrency;
+    private final String CURRENCY_FREQUENCY_STRING;
+    private final String TESTED_CURRENCY;
+    private final int MOVING_AVERAGE_UNITS;
+
     private final List<SortedMap<String, Integer>> listOfCategories;
     private final List<String> headerLine;
 
-    public Indicator() {
+    public Indicator() throws Exception {
         configFile = new ConfigFile();
         thresholds = configFile.getThresholds();
         currencyFrequency = configFile.getCurrencyFrequency();
-        currencyFrequencyString = configFile.getCurrencyFrequencyAsString();
-        testedCurrency = configFile.getTestedCurrency();
+        CURRENCY_FREQUENCY_STRING = configFile.getCurrencyFrequencyAsString();
+        TESTED_CURRENCY = configFile.getTestedCurrency();
+        MOVING_AVERAGE_UNITS = configFile.getMovingAverageUnits();
 
         listOfCategories = new ArrayList<>();
         headerLine = new ArrayList<>();
     }
 
-    public void processCurrencies() {
+    public void processCurrencies() throws Exception {
 
-        String fullDirName = "./resources/" + currencyFrequencyString;
+        String fullDirName = "./resources/" + CURRENCY_FREQUENCY_STRING;
         String[] filePathsList = getFilePathsList(fullDirName);
         Set<String> lastCurrencyDates = new HashSet<>();
 
@@ -45,12 +48,11 @@ public class Indicator {
         mergeCategoryValuesIntoFile();
 
         Tools.writeJenaConfig(headerLine);
-        Tools.writeDLLearnerConfig(listOfCategories, configFile.getDlLearnerRunLimitSeconds(), testedCurrency, headerLine, thresholds.size());
+        Tools.writeDLLearnerConfig(listOfCategories, configFile.getDlLearnerRunLimitSeconds(), TESTED_CURRENCY, headerLine, thresholds.size());
     }
 
     private SortedMap<String, Integer> processCurrency(String filePath, String fullDirName, Set<String> lastCurrencyDates) {
         File inputFile = new File(fullDirName + "/" + filePath);
-        headerLine.add(filePath.substring(0, filePath.indexOf('_')));
         SortedMap<String, Float> records = getDifferenceValues(inputFile, currencyFrequency == ConfigFile.CurrencyFrequency.DAILY);
         return assignCategoriesToCurrencyRecords(records, thresholds, lastCurrencyDates);
     }
@@ -71,30 +73,31 @@ public class Indicator {
 
     private SortedMap<String, Integer> assignCategoriesToCurrencyRecords(SortedMap<String, Float> records, List<Float> thresholds, Set<String> lastCurrencyDates) {
 
-//        Queue<Float> last10 = new LinkedList<>();
+       Queue<Float> lastN = new LinkedList<>();
 
-//        final int SAMPLE_SIZE = 10;
-//        float currentSampleSum = 0;
+        float newSampleSum = 0;
         float lowest = Collections.min(records.values());
         float highest = Collections.max(records.values());
-        float average = records.values().stream().reduce(0f, Float::sum) / records.size();
+        float average = 0;
+        if (MOVING_AVERAGE_UNITS == 0) {
+            average = records.values().stream().reduce(0f, Float::sum) / records.size();
+        }
         float extremesDifference = highest - lowest;
 
         SortedMap<String, Integer> categoryValues = new TreeMap<>();
         for (Map.Entry<String, Float> currentRecord : records.entrySet()) {
-            /*
-            Float previousRecord = 0f;
-            last10.add(currentRecord);
-            if (last10.size() > SAMPLE_SIZE) {
-                previousRecord = last10.remove();
+            if (MOVING_AVERAGE_UNITS > 0) {
+                Float currentRecordValue = currentRecord.getValue();
+                if (lastN.size() == MOVING_AVERAGE_UNITS) {
+                    average = newSampleSum / lastN.size();
+                    Float oldestRecordValue = lastN.remove();
+                    newSampleSum -= oldestRecordValue;
+                }
+                newSampleSum += currentRecordValue;
+                lastN.add(currentRecordValue);
             }
-             */
 
-            //float newAverage = calcNewAverage(currentSampleSum, currentRecord, previousRecord, last10.size());
-            //currentSampleSum += currentRecord - previousRecord;
-
-            //int hasAverageIncreased = Float.compare(newAverage, currentSampleSum);
-            //int categoryValue = findClosestCategoryValue(thresholds, currentRecord.getValue(), average, extremesDifference);
+            //int hasAverageIncreased = Float.compare(newAverage, newSampleSum);
             int categoryValue = findCategoryValue(thresholds, currentRecord.getValue(), average, extremesDifference);
             String categoryDate = currentRecord.getKey();
             if (lastCurrencyDates.isEmpty()) {
@@ -111,9 +114,6 @@ public class Indicator {
 
     private int findCategoryValue(List<Float> thresholds, float currentRecord, float average, float extremesDifference) {
         float currentToAverageRecordRatio = (currentRecord - average) / extremesDifference;
-        if (currentToAverageRecordRatio == 0) {
-            return 0;
-        }
 
         int thresholdIndex = 0;
         boolean thresholdCrossed = false;
@@ -125,7 +125,7 @@ public class Indicator {
             }
         }
         thresholdIndex -= ((thresholds.size() + 1) / 2);
-        if (thresholdIndex >= 0) {
+        if (thresholdIndex < 0) {
             thresholdIndex++;
         }
         return thresholdIndex;
@@ -199,6 +199,7 @@ public class Indicator {
                     writer.flush();
                     writer.close();
                 }
+                System.out.println("Knowledge base generated in file " + Tools.OUTPUT_DIRECTORY + Tools.OUTPUT_FILE + ".");
             } catch (IOException e) {
                 e.printStackTrace();
             }
